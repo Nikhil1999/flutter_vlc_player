@@ -8,7 +8,9 @@ import org.videolan.libvlc.RendererItem;
 import org.videolan.libvlc.interfaces.IMedia;
 import org.videolan.libvlc.interfaces.IVLCVout;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.net.Uri;
@@ -272,14 +274,26 @@ final class FlutterVlcPlayer implements PlatformView {
     void setStreamUrl(String url, boolean isAssetUrl, boolean autoPlay, long hwAcc) {
         if (mediaPlayer == null) return;
 
+        AssetFileDescriptor assetFileDescriptor = null;
+
         try {
             mediaPlayer.stop();
+            Uri uri = Uri.parse(url);
+            String scheme = uri.getScheme();
             //
             Media media;
             if (isAssetUrl)
                 media = new Media(libVLC, context.getAssets().openFd(url));
-            else
+            else if (scheme != null && scheme.equals(ContentResolver.SCHEME_CONTENT)) {
+                assetFileDescriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
+                if (assetFileDescriptor != null) {
+                    media = new Media(libVLC, assetFileDescriptor);
+                } else {
+                    media = new Media(libVLC, Uri.parse(url));
+                }
+            } else {
                 media = new Media(libVLC, Uri.parse(url));
+            }
             final HwAcc hwAccValue = HwAcc.values()[(int) hwAcc];
             switch (hwAccValue) {
                 case DISABLED:
@@ -307,6 +321,14 @@ final class FlutterVlcPlayer implements PlatformView {
             }
         } catch (IOException e) {
             log(e.getMessage());
+        } finally {
+            try {
+                if (assetFileDescriptor != null) {
+                    assetFileDescriptor.close();
+                }
+            } catch (Exception e) {
+                log(e.getMessage());
+            }
         }
     }
 
