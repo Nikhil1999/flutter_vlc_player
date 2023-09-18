@@ -321,14 +321,6 @@ final class FlutterVlcPlayer implements PlatformView {
             }
         } catch (IOException e) {
             log(e.getMessage());
-        } finally {
-            try {
-                if (assetFileDescriptor != null) {
-                    assetFileDescriptor.close();
-                }
-            } catch (Exception e) {
-                log(e.getMessage());
-            }
         }
     }
 
