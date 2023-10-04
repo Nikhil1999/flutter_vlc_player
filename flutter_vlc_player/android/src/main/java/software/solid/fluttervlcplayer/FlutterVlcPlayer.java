@@ -72,6 +72,7 @@ final class FlutterVlcPlayer implements PlatformView {
         rendererEventChannel.setStreamHandler(null);
         if (mediaPlayer != null) {
             mediaPlayer.stop();
+            mediaPlayer.setEventListener(null);
             mediaPlayer.getVLCVout().detachViews();
             mediaPlayer.release();
             mediaPlayer = null;
@@ -127,7 +128,7 @@ final class FlutterVlcPlayer implements PlatformView {
     // }
 
     public void initialize(List<String> options) {
-        this.options = options; 
+        this.options = options;
         libVLC = new LibVLC(context, options);
         mediaPlayer = new MediaPlayer(libVLC);
         setupVlcMediaPlayer();
@@ -244,19 +245,19 @@ final class FlutterVlcPlayer implements PlatformView {
     }
 
     void play() {
-        if (mediaPlayer != null) {
+        if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
             mediaPlayer.play();
         }
     }
 
     void pause() {
-        if (mediaPlayer != null) {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
         }
     }
 
     void stop() {
-        if (mediaPlayer != null) {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
             mediaPlayer.stop();
         }
     }
@@ -277,7 +278,9 @@ final class FlutterVlcPlayer implements PlatformView {
         AssetFileDescriptor assetFileDescriptor = null;
 
         try {
-            mediaPlayer.stop();
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.stop();
+            }
             Uri uri = Uri.parse(url);
             String scheme = uri.getScheme();
             //
@@ -309,15 +312,14 @@ final class FlutterVlcPlayer implements PlatformView {
                 media.addOption(":no-omxil-dr");
             }
             if (options != null) {
-                for (String option: options)
+                for (String option : options)
                     media.addOption(option);
             }
             mediaPlayer.setMedia(media);
             media.release();
             //
-            mediaPlayer.play();
-            if (!autoPlay) {
-                mediaPlayer.stop();
+            if (autoPlay) {
+                mediaPlayer.play();
             }
         } catch (IOException e) {
             log(e.getMessage());
@@ -364,7 +366,7 @@ final class FlutterVlcPlayer implements PlatformView {
 
     long getPosition() {
         if (mediaPlayer == null) return -1;
-        
+
         return mediaPlayer.getTime();
     }
 
@@ -626,8 +628,7 @@ final class FlutterVlcPlayer implements PlatformView {
         if (isDisposed) {
             return;
         }
-        boolean isPlaying = mediaPlayer.isPlaying();
-        if (isPlaying)
+        if (mediaPlayer.isPlaying())
             mediaPlayer.pause();
 
         // if you set it to null, it will start to render normally (i.e. locally) again
@@ -658,6 +659,7 @@ final class FlutterVlcPlayer implements PlatformView {
     }
 
     Boolean stopRecording() {
+        if (mediaPlayer == null) return true;
         return mediaPlayer.record(null);
     }
 
